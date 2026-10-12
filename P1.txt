@@ -1,0 +1,38 @@
+
+p1.
+
+1. core-site.xml
+Is file ko open karein aur <configuration> tags ke andar ye code paste karein:
+
+XML
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://localhost:9000</value>
+</>
+2.hdfs-site.xml
+<property>
+  <name>dfs.replication</name>
+  <value>1</value>
+</property>
+<property>
+  <name>dfs.namenode.name.dir</name>
+  <value>/C:/hadoop/data/namenode</value>
+</property>
+<property>
+  <name>dfs.datanode.data.dir</name>
+  <value>/C:/hadoop/data/datanode</value>
+</property>
+3.mapred-site.xml
+<property>
+  <name>mapreduce.framework.name</name>
+  <value>yarn</value>
+</property>
+4.yarn-site.xml
+<property>
+  <name>yarn.nodemanager.aux-services</name>
+  <value>mapreduce_shuffle</value>
+</property>
+<property>
+  <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+  <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>

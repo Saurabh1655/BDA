@@ -1,0 +1,58 @@
+Step 1: Configure System Environment Variables
+To ensure you can run MongoDB commands from any command prompt window:
+
+1.Locate your MongoDB server installation path (typically C:\Program Files\MongoDB\Server\7.0\bin or your installed version path).
+
+2. Open Windows Environment Variables, edit the Path variable under System Variables, and add this directory path.
+
+Step 2:
+2.1 Open a Command Prompt as Administrator and run:
+
+mkdir C:\data\db
+
+Step 3: 
+mongosh
+
+Step 4:
+1. Database Creation & Switching
+use college_db
+
+Verification: The shell outputs switched to db college_db.
+
+2. Insert Documents (Create)
+
+db.students.insertOne({
+    rollNo: 101,
+    name: "Aarav",
+    department: "Computer Science",
+    marks: 85,
+    city: "Mumbai"
+});
+
+db.students.insertMany([
+    { rollNo: 102, name: "Priya", department: "Business Analytics", marks: 92, city: "Pune" },
+    { rollNo: 103, name: "Rahul", department: "Computer Science", marks: 74, city: "Mumbai" }
+]);
+
+3. Query Documents (Read)
+Retrieve all documents stored in the collection in a readable format:
+
+db.students.find().pretty()
+
+Filter documents using specific query criteria (e.g., find all Computer Science students):
+
+db.students.find({ department: "Computer Science" }).pretty()
+
+4. Update Documents (Update)
+Update a student's marks using their unique roll number:
+
+db.students.updateOne(
+    { rollNo: 103 },
+    { $set: { marks: 78 } }
+);
+
+5. Delete Documents (Delete)
+Remove a specific student record from the collection:
+
+db.students.deleteOne({ rollNo: 101 });
+

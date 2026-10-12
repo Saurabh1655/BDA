@@ -1,0 +1,126 @@
+Create a local text file named student_scores.txt. Each record represents a student&#39;s score
+in a specific subject:
+101,Aarav,Maths,85
+101,Aarav,Science,90
+101,Aarav,English,80
+102,Priya,Maths,95
+102,Priya,Science,92
+102,Priya,English,88
+103,Rahul,Maths,55
+103,Rahul,Science,60
+103,Rahul,English,58
+104,Sneha,Maths,35
+104,Sneha,Science,40
+104,Sneha,English,38
+
+Ensure your Hadoop background services are active (start-dfs.cmd and start-yarn.cmd), then upload the dataset to HDFS
+
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class StudentGrades {
+
+    // MAPPER: Emits (RollNo - Name) as Key, and Subject Marks as Value
+    public static class GradeMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private Text studentKey = new Text();
+        private IntWritable marks = new IntWritable();
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String line = value.toString().trim();
+            if (line.isEmpty()) return;
+
+            String[] tokens = line.split(",");
+            if (tokens.length == 4) {
+                String rollNo = tokens[0].trim();
+                String name = tokens[1].trim();
+                int score = Integer.parseInt(tokens[3].trim());
+
+                studentKey.set(rollNo + "\t" + name);
+                marks.set(score);
+                context.write(studentKey, marks);
+            }
+        }
+    }
+
+    // REDUCER: Aggregates marks, computes average, and determines the letter grade
+    public static class GradeReducer extends Reducer<Text, IntWritable, Text, Text> {
+        private Text result = new Text();
+
+        @Override
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int totalMarks = 0;
+            int subjectCount = 0;
+
+            for (IntWritable val : values) {
+                totalMarks += val.get();
+                subjectCount++;
+            }
+
+            double average = (subjectCount > 0) ? ((double) totalMarks / subjectCount) : 0.0;
+            String grade;
+
+            if (average >= 80.0) {
+                grade = "A+ (Distinction)";
+            } else if (average >= 70.0) {
+                grade = "A (First Class)";
+            } else if (average >= 60.0) {
+                grade = "B (Second Class)";
+            } else if (average >= 40.0) {
+                grade = "C (Pass)";
+            } else {
+                grade = "F (Fail)";
+            }
+
+            result.set(String.format("Average: %.2f | Grade: %s", average, grade));
+            context.write(key, result);
+        }
+    }
+
+    // DRIVER: Configures and executes the MapReduce job
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Student Grade Calculator");
+
+        job.setJarByClass(StudentGrades.class);
+        job.setMapperClass(GradeMapper.class);
+        job.setReducerClass(GradeReducer.class);
+
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(IntWritable.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+
+S3
+Set Hadoop Classpath:
+FOR /F "delims=" %I IN ('hadoop classpath') DO set HADOOP_CP=%I
+
+Compile with JDK 8:
+"C:\java\jdk1.8.0_131\bin\javac" -cp "%HADOOP_CP%" StudentGrades.java
+
+Package into a JAR:
+jar cf student_grades.jar StudentGrades*.class
+
+Execute the MapReduce Job:
+hadoop jar student_grades.jar StudentGrades /grades/input /grades/output
+
+
+S4 
+hadoop fs -cat /grades/output/part-r-00000

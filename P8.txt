@@ -1,0 +1,140 @@
+S1 
+
+cd C:\HadoopPracticals\KMeans
+
+Create a local text file named points.txt containing 2D spatial data points (representing
+coordinates x, y):
+1.0, 1.0
+1.5, 2.0
+1.0, 0.5
+8.0, 8.0
+8.5, 9.0
+9.0, 8.5
+1.2 Upload this dataset into your Hadoop Distributed File System (HDFS):
+hadoop fs -mkdir -p /kmeans/input
+hadoop fs -put points.txt /kmeans/input/
+
+S2 Create a file named KMeansMapReduce.java.
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class KMeansMapReduce {
+
+    // Helper class to represent a 2D Point
+    public static class Point {
+        double x, y;
+
+        public Point(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        // Euclidean distance formula between two points
+        public static double distance(Point p1, Point p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+    }
+
+    // MAPPER: Assigns each data point to the nearest centroid
+    public static class KMeansMapper extends Mapper<Object, Text, Text, Text> {
+        private List<Point> centroids = new ArrayList<>();
+
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+            // Hardcoded initial centroids for demonstration (Centroid 0 at 1,1 and Centroid 1 at 8,8)
+            centroids.add(new Point(1.0, 1.0));
+            centroids.add(new Point(8.0, 8.0));
+        }
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String line = value.toString().trim();
+            if (line.isEmpty()) return;
+
+            String[] parts = line.split(",");
+            Point currentPoint = new Point(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]));
+
+            int nearestCentroidIndex = 0;
+            double minDistance = Double.MAX_VALUE;
+
+            // Find the closest centroid for the current point
+            for (int i = 0; i < centroids.size(); i++) {
+                double dist = Point.distance(currentPoint, centroids.get(i));
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestCentroidIndex = i;
+                }
+            }
+
+            // Emit: Centroid_ID -> Point coordinates
+            context.write(new Text("Centroid_" + nearestCentroidIndex), 
+                          new Text(currentPoint.x + "," + currentPoint.y));
+        }
+    }
+
+    // REDUCER: Recalculates the new centroid position based on assigned points
+    public static class KMeansReducer extends Reducer<Text, Text, Text, Text> {
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            double sumX = 0;
+            double sumY = 0;
+            int count = 0;
+
+            // Aggregate all points belonging to this centroid
+            for (Text val : values) {
+                String[] coords = val.toString().split(",");
+                sumX += Double.parseDouble(coords[0]);
+                sumY += Double.parseDouble(coords[1]);
+                count++;
+            }
+
+            // Calculate new average coordinates (mean)
+            if (count > 0) {
+                double newX = sumX / count;
+                double newY = sumY / count;
+                context.write(key, new Text(newX + "," + newY));
+            }
+        }
+    }
+
+    // DRIVER: Configures and runs the MapReduce job
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "KMeans Clustering MapReduce");
+
+        job.setJarByClass(KMeansMapReduce.class);
+        job.setMapperClass(KMeansMapper.class);
+        job.setReducerClass(KMeansReducer.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+S3 
+3.1 
+FOR /F "delims=" %I IN ('hadoop classpath') DO set HADOOP_CP=%I
+
+3.2 "C:\java\jdk1.8.0_131\bin\javac" -cp "%HADOOP_CP%" KMeansMapReduce.java
+3.3 jar cf kmeans.jar KMeansMapReduce*.class
+3.4 hadoop jar kmeans.jar KMeansMapReduce /kmeans/input /kmeans/output
+
+S4 Verification of Results
+
+hadoop fs -cat /kmeans/output/part-r-00000
+

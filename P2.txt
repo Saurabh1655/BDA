@@ -1,0 +1,63 @@
+Master
+Go to C:\hadoop\etc\hadoop,
+1.Core_site.xlm
+  <configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://172.16.0.81:9000</value> 
+    </property>
+</configuration>
+
+2.hdfs-site.xml
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/C:/hadoop/data/namenode</value>
+    </property>
+</configuration>
+3. Yarn-site.xml
+<configuration>
+    <property>
+        <name>yarn.resourcemanager.hostname</name>
+        <value>172.16.0.81</value>
+    </property>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+
+4.worker file
+C:\hadoop\etc\hadoop\workers.
+172.16.0.82
+
+Phase 3. Worker Node (IP 172,16,0.82)
+
+Copy the exact core-site.xml and yarn-site.xml 
+Edit the Worker's hdfs-site.xml to specify its datanode directory:
+XML
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/C:/hadoop/data/datanode</value>
+    </property>
+</configuration>
+
+Phase 4: do on master pc
+s1. hdfs namenode -format
+s2. CMD Window 1: hdfs namenode
+    CMD Window 2: yarn resourcemanager
+s3. CMD Window 1: hdfs datanode
+    CMD Window 2: yarn nodemanage
+s4. Go to your Master PC and open a web browser.
+http://172.16.0.81:9870
+http://172.16.0.81:8088
+
