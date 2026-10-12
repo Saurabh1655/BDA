@@ -1,0 +1,162 @@
+To set up HBase, you will need to follow a similar process to what you did for Flume:
+Download: Download a stable HBase binary release hbase-2.5.15-hadoop3-bin.tar.gz from the Apache website.
+2. Install: Extract the .tar.gz file to your C: drive (e.g., C:\hbase).
+3. Configure: Edit the hbase-site.xml file in the conf folder so HBase knows where your Hadoop cluster is located (pointing it to hdfs://localhost:9000). Configuration tag should updated like below (You can copy and paste it)
+
+<configuration>
+  	  <property>
+   	    <name>hbase.rootdir</name>
+    	    <value>hdfs://localhost:9000/hbase</value>
+  	  </property>
+  	  <property>
+          <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hbase.tmp.dir</name>
+    <value>C:/hbase/tmp</value>
+  </property>
+</configuration>
+
+
+Create a file named HBaseOperations.java and use the following code
+
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*; 
+//Covers Connection, Table, Put, Delete
+import org.apache.hadoop.hbase.util.Bytes; // Covers byte conversions
+
+public class HBaseOperations {
+
+    public static void main(String[] args) throws IOException {
+        
+        // 1. Establish the Configuration and Connection
+        Configuration config = HBaseConfiguration.create();
+        
+        try (Connection connection = ConnectionFactory.createConnection(config);
+             Table table = connection.getTable(TableName.valueOf("students"))) {
+             
+            System.out.println("Successfully connected to HBase 'students' table.");
+
+            // Define our target Row Key and Column Family
+            byte[] rowKey = Bytes.toBytes("student101");
+            byte[] columnFamily = Bytes.toBytes("info");
+
+            
+            // 2. INSERT RECORD
+
+            Put insertRecord = new Put(rowKey);
+            // Syntax: addColumn(ColumnFamily, Qualifier, Value)
+            insertRecord.addColumn(columnFamily, Bytes.toBytes("name"), Bytes.toBytes("Ramesh"));
+            insertRecord.addColumn(columnFamily, Bytes.toBytes("grade"), Bytes.toBytes("B"));
+            
+            table.put(insertRecord);
+            System.out.println("Record Inserted successfully.");
+
+            
+            // 3. UPDATE RECORD
+           
+            // We use Put again. Writing to the same Row Key and Qualifier updates the value.
+            Put updateRecord = new Put(rowKey);
+            updateRecord.addColumn(columnFamily, Bytes.toBytes("grade"), Bytes.toBytes("A+"));
+            
+            table.put(updateRecord);
+            System.out.println("Record Updated successfully (Grade changed to A+).");
+
+            // 4. DELETE RECORD
+
+            Delete deleteRecord = new Delete(rowKey);
+            // This deletes the entire row. 
+            // (You could also use deleteRecord.addColumn(...) to delete a specific cell)
+            table.delete(deleteRecord);
+            System.out.println("Record Deleted successfully.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Phase 1:
+  S1 Fix the JRuby Bootstrap and Log4j2 Crash
+1.1 In a Command Prompt, go to your HBase bin folder:
+cd C:\hbase\bin
+1.2 Pull the bootstrap script out of the HBase library archive:
+jar xf ..\lib\hbase-shell-2.5.15-hadoop3.jar jar-bootstrap.rb
+
+1.3 Open jar-bootstrap.rb and use a hash (#) to comment out lines 141 and 142 as shown below:
+#org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
+#org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop', log_level)
+1.4 Save the script changes.
+
+S2 Update hbase.cmd
+2.1 Open the hbase.cmd file located in C:\hbase\bin.
+2.2 Modify the main execution line to point directly to the local script file:
+2.3 set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% jar-bootstrap.rb
+
+2.4 Save your changes and exit.
+
+S4 Start Hbase
+Run Following every command in new cmd in same sequence as given(run as administrator) also change folder to bin (cd c:\hbase\bin)
+hbase.cmd zookeeper (cmd 1)
+2. hbase.cmd regionserver start (cmd 2)
+3. hbase.cmd master start (cmd 3
+
+
+Phase 2: Launching and Testing the HBase Shell
+S1: Set Terminal Bypass Options and Start the Shell
+Navigate to the bin folder and initialize the shell environment:
+
+cd C:\hbase\bin
+
+set HBASE_OPTS=-Djline.terminal=jline.UnsupportedTerminal -Dorg.fusesource.jansi.native.disable=true
+
+hbase shell
+
+Ensure the prompt successfully displays hbase:001:0>.
+
+Step 2: Run Cluster Verification & Table Commands
+2.1 erify the cluster health status:
+status
+Expected Output: 1 active master, 1 servers, 0 dead.
+
+2. Generate a new table with its column family:
+create 'students', 'info'
+
+3. Manually insert sample data:
+put 'students', '1', 'info:name', 'John'
+
+4. Confirm data presence using scan:
+scan 'students'
+
+
+Phase 3: Programmatic Interaction via Java API
+To manage HBase data through a Java application 
+3.1 Generate the Dynamic Classpath
+Standing inside the HBase bin folder, set the classpath variable to ensure all required libraries are mapped:
+
+cd C:\hbase\bin
+
+FOR /F "delims=" %I IN ('hbase classpath') DO set HBASE_CP=%I
+
+3.2 Compile Using Java 8
+Go to your project path and compile the code using the JDK 8 compiler to maintain compatibility:
+
+cd C:\HadoopPracticals\HBasePractical
+
+"C:\java\bin\javac" -cp "%HBASE_CP%" HBaseOperations.java
+
+S3 Execute the Java Client
+Launch the compiled application using the following command:
+
+java -cp ".;%HBASE_CP%" HBaseOperations
+
+Verification: Return to the shell and execute scan 'students' to verify that records like student101 have been updated or inserted correctly by your Java program
