@@ -36,3 +36,14 @@ XML
   <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
   <value>org.apache.hadoop.mapred.ShuffleHandler</value>
 </property>
+5. hadoop-env.cmd
+Find the line that says set JAVA_HOME=%JAVA_HOME% and change it to point explicitly to your Java path: 
+set JAVA_HOME=C:\Java\jdk1.8.0_xx
+
+hdfs namenode -format
+
+steart-dfs.cmd
+start-yarn.cmd
+
+http://localhost:9870
+
